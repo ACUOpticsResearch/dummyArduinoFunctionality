@@ -3,134 +3,129 @@ Ryan Wilson 2015.
 */
 
 
-#include <Adafruit_MotorShield.h>
+//#include <Adafruit_MotorShield.h>
 #include <Wire.h>
 #include <EEPROM.h>
 
-Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
+//Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
 // Connect a stepper motor with 200 steps per revolution (1.8 degree)
 // to motor port #2 (M3 and M4)
-Adafruit_StepperMotor *myMotor = AFMS.getStepper(200, 2);
+//Adafruit_StepperMotor *myMotor = AFMS.getStepper(200, 2);
 
-long address;
-long currenteep; 
-long current; 
-long currenteep2;
-long WVL,WVL2;
-long dif;
-long goldengoose;
+#define ADDR 0
+float currentMemory;
+float currentLocal;
 
-long EEPROMReadlong(long address)
+float EEPROMReadFloat()
 {
   //Read the 4 bytes from the eeprom memory.
-  long four = EEPROM.read(address);
-  long three = EEPROM.read(address + 1);
-  long two = EEPROM.read(address + 2);
-  long one = EEPROM.read(address + 3);
+  long four = EEPROM.read(ADDR);
+  long three = EEPROM.read(ADDR + 1);
+  long two = EEPROM.read(ADDR + 2);
+  long one = EEPROM.read(ADDR + 3);
 
   //Return the recomposed long by using bitshift.
-  return ((four << 0) & 0xFF) + ((three << 8) & 0xFFFF) + ((two << 16) & 0xFFFFFF) + ((one << 24) & 0xFFFFFFFF);
+  return (float) ((four << 0) & 0xFF) + ((three << 8) & 0xFFFF) + ((two << 16) & 0xFFFFFF) + ((one << 24) & 0xFFFFFFFF);
 }
 
-void EEPROMWritelong(int address, long value)
+void EEPROMWriteFloat(float value)
 {
   //Decomposition from a long to 4 bytes by using bitshift.
   //One = Most significant -> Four = Least significant byte
-  byte four = (value & 0xFF);
-  byte three = ((value >> 8) & 0xFF);
-  byte two = ((value >> 16) & 0xFF);
-  byte one = ((value >> 24) & 0xFF);
+  byte four = ((long)value & 0xFF);
+  byte three = (((long)value >> 8) & 0xFF);
+  byte two = (((long)value >> 16) & 0xFF);
+  byte one = (((long)value >> 24) & 0xFF);
 
   //Write the 4 bytes into the eeprom memory.
-  EEPROM.write(address, four);
-  EEPROM.write(address + 1, three);
-  EEPROM.write(address + 2, two);
-  EEPROM.write(address + 3, one);
+  EEPROM.write(ADDR, four);
+  EEPROM.write(ADDR + 1, three);
+  EEPROM.write(ADDR + 2, two);
+  EEPROM.write(ADDR + 3, one);
 }
 
-void setWavelengthFromMemory() {
+void setWavelengthToMemory(float wave) {
  // Serial.println();
  // Serial.println("Set current wavelength in memory (EEPROM)");
 //  Serial.println("What address would you like to save to: 0,4,8...");
-  Serial.flush();
-  while (!Serial.available());
-  delay(300);
-  if(Serial.available()){
-    address = Serial.parseInt();
-  }
+//  Serial.flush();
+//  while (!Serial.available());
+//  delay(300);
+//  if(Serial.available()){
+//    address = Serial.parseFloat();
+//  }
  // Serial.println();
  // Serial.println("What is the current wavelength in Angstroms");
-  Serial.flush();
-  while (!Serial.available());
-  delay(300);
-  if(Serial.available()){
-    currenteep2 = Serial.parseInt();
-  }
-  goldengoose = currenteep2;
-  current = currenteep2;
-  EEPROMWritelong(address ,currenteep2); // change 0 back to "address"
+  
+  currentLocal = wave;
+  currentMemory = wave;
+  EEPROMWriteFloat(wave); // change 0 back to "address"
 }   
 void getWavelengthFromMemory(){
-  currenteep = EEPROMReadlong(0);   // change 0....  read "current" wavelength from eeprom
-
+  currentMemory = EEPROMReadFloat();   // change 0....  read "current" wavelength from eeprom
+  currentLocal = currentMemory;
  // Serial.println();
  // Serial.print("The current wavelength saved to EEPROM is ");
-  Serial.print(currenteep);
+  Serial.print(currentMemory);
  // Serial.println(" Angstroms");
   Serial.flush();
-
-  goldengoose = currenteep;
-  current = currenteep;  
 }
-void goToWavelength(){
+float goToWavelength(float wave){
   //Serial.println();
   //Serial.println("What wavelength would you like to go to (in Angstroms)?");
   //Serial.println("DO NOT GO OVER 9950 OR BELOW 2500.");
-  Serial.flush();
-  while (!Serial.available());
-  delay(300);
-  if(Serial.available()){
-    WVL2 = Serial.parseInt();
-  }
+  //Serial.flush();
+  
   //Serial.print("You have entered ");
-  //Serial.print(WVL2);
- // Serial.println(" Angstroms.");
+  //Serial.print(wave);
+  //Serial.println(" Angstroms.");
 
-  if(WVL2 > 9990 || WVL2 < 2500)
+  if(wave > 9990 || wave < 2500)
   {
-   // Serial.println("You have entered an invalid wavelength.");
+    //Serial.println("You have entered an invalid wavelength.");
     Serial.flush();
-    WVL2 = current;
+    wave = currentLocal;
   }
 
-  dif = WVL2 - current;
+  int dif = wave - currentLocal;
   if(dif<0){
     dif = dif*(-1);
   }
   // int steps = dif/1.25; // 1/1 ratio
      int steps = dif/.3125; // 1/4   
  
-  if( WVL2 > current ){
+/*  if( wave > currentLocal ){
     myMotor->step(steps, FORWARD, SINGLE);
   }
-  if( WVL2 < current ){
+  if( wave < currentLocal ){
     myMotor->step(steps, BACKWARD, SINGLE);
   }
-  current = WVL2;                
-  goldengoose = WVL2;
+*/
+  //replace motor motion with delay
+  delay(80*steps);
+  currentLocal = wave;
+  Serial.print(currentLocal);
+  return currentLocal;
 }   
-void stepUp(){
-  myMotor->step(1, FORWARD, SINGLE);
-  goldengoose = goldengoose + .3125;      
+float stepUp(){
+  
+  //myMotor->step(1, FORWARD, SINGLE);
+  delay(80);
+  currentLocal = currentLocal + .3125;
+  Serial.print(currentLocal);
+  return currentLocal;  
 }
-void stepDown(){
-  myMotor->step(1, BACKWARD, SINGLE);
-  goldengoose = goldengoose - .3125;      
+float stepDown(){
+  //myMotor->step(1, BACKWARD, SINGLE);
+  delay(80);
+  currentLocal = currentLocal - .3125;
+  Serial.print(currentLocal);
+  return currentLocal;  
 }
 void getLocalWavelength(){
   //Serial.println();
   //Serial.print("The current wavelength is ");
-  Serial.print(goldengoose);
+  Serial.print(currentLocal);
   //Serial.println(" Angstroms.");
 }
 
@@ -138,13 +133,15 @@ void setup() {
   Serial.begin(9600);           // set up Serial library at 9600 bps
  // Serial.println("L A S E Rz");
 
-  AFMS.begin();  // create with the default frequency 1.6KHz
+  delay(250);
+  //AFMS.begin();  // create with the default frequency 1.6KHz
   //AFMS.begin(1000);  // OR with a different frequency, say 1KHz
-  myMotor->setSpeed(50);  
+  //myMotor->setSpeed(50);
+  getWavelengthFromMemory();  
 }
 
 void loop() {
-  int leprechaun = 0;
+  int action = 0;
 
 /*
   Serial.println("");
@@ -160,34 +157,39 @@ void loop() {
   while (!Serial.available());
   //delay(300);
   if(Serial.available()){
-    leprechaun = Serial.parseInt();
+    action = Serial.parseFloat();
   }
   
 
 
 
 ////////////////////////////////////////////////////////////////////
-  if(leprechaun == 1){
-    setWavelengthFromMemory();
+  if(action == 1){
+    Serial.flush();
+    while (!Serial.available());
+    delay(300);
+    setWavelengthToMemory(Serial.parseFloat());
   }
   ///////////////////////////////////////////////////////////////////
-  if(leprechaun == 2){
+  if(action == 2){
     getWavelengthFromMemory();
   }
   /////////////////////////////////////////////////////////////////////////////
-  if(leprechaun == 3){
-    goToWavelength();
+  if(action == 3){
+    while (!Serial.available());
+    delay(300);
+    goToWavelength(Serial.parseFloat());
   }
   ////////////////////////////////////////////////////////////////////
-  if(leprechaun == 4){
+  if(action == 4){
     stepUp();
   }
   //////////////////////////////////////////////////////////////////
-  if(leprechaun == 5){
+  if(action == 5){
     stepDown();
   }
   //////////////////////////////////////////////////////////////////
-  if(leprechaun == 6){
+  if(action == 6){
     getLocalWavelength();
   }
   //////////////////////////////////////////////////////////////////
